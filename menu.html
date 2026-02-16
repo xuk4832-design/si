@@ -23,8 +23,85 @@
 
         <section class="buttons">
             <div class="confirmar"></div>
-            <div class="Atras"></div>
+            <div class="Atras"></div> 
+        </section> 
+
+
+
+
+
+    <section class="productos">
+    <div class="slider">
+
+        <button class="arrow left">&#10094;</button>
+
+        <div class="slider-track">
+        
+        <div class="card">
+            <img src="p6000.png" alt="P-6000">
+            <span class="badge">P-6000</span>
+        </div>
+
+        <div class="card">
+            <img src="shox.png" alt="Shox">
+            <span class="badge">Shox</span>
+        </div>
+
+        <div class="card">
+            <img src="airjordan.png" alt="Air Jordan">
+            <span class="badge">Air Jordan</span>
+        </div>
+        <div class="card">
+            <img src="p6000.png" alt="P-6000">
+            <span class="badge">P-6000</span>
+        </div>
+
+        <div class="card">
+            <img src="shox.png" alt="Shox">
+            <span class="badge">Shox</span>
+        </div>
+
+        <div class="card">
+            <img src="airjordan.png" alt="Air Jordan">
+            <span class="badge">Air Jordan</span>
+        </div>
+        <div class="card">
+            <img src="p6000.png" alt="P-6000">
+            <span class="badge">P-6000</span>
+        </div>
+
+        <div class="card">
+            <img src="shox.png" alt="Shox">
+            <span class="badge">Shox</span>
+        </div>
+
+        <div class="card">
+            <img src="airjordan.png" alt="Air Jordan">
+            <span class="badge">Air Jordan</span>
+        </div>
+
+        
+        </div>
+
+        <button class="arrow right">&#10095;</button>
+
+        </div>
         </section>
     </main>
+
+
+    <script>
+        const track = document.querySelector('.slider-track');
+        const next = document.querySelector('.right');
+        const prev = document.querySelector('.left');
+
+        next.addEventListener('click', () => {
+        track.scrollBy({ left: 420, behavior: 'smooth' });
+        });
+
+        prev.addEventListener('click', () => {
+        track.scrollBy({ left: -420, behavior: 'smooth' });
+        });
+    </script>
 </body>
 </html>
