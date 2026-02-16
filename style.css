@@ -1,0 +1,24 @@
+/*Body*/
+
+body{
+    margin: 0px;
+    padding-top: 50px;
+    background-color: grey;
+    display: flex;
+    justify-content: center;
+    font-style: none;
+    background-image: url(images/stars.avif);
+    background-size: cover;      /* se adapta y cubre todo */
+    background-repeat: no-repeat;/* no se repite */
+}
+
+/*Background*/
+
+.background{
+    width: 1500px;
+    height: 800px;
+    background-image: url(images/gif.gif);
+    background-size: cover;      /* se adapta y cubre todo */
+    background-repeat: no-repeat;/* no se repite */
+    padding: 64px;
+}
