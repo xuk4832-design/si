@@ -25,6 +25,7 @@ a{
     background-image: url(images/gif.gif);
     background-size: cover;      /* se adapta y cubre todo */
     background-repeat: no-repeat;/* no se repite */
+    display: flex;
 }
 
 /*Container*/
@@ -32,7 +33,7 @@ a{
 .container-1{
     border-radius: 20px;
     border: solid 10px rgb(77, 77, 77);
-    margin: 24px 0 0 64px;
+    margin: 24px 200px 0 64px;
     background: linear-gradient(to top , #5e5e5ef4, #00000071);    
     text-align: center;
     width: 290px;
@@ -73,8 +74,7 @@ a{
 
 
 .productos {
-  padding: 40px;
-  position: absolute;
+  padding: 150px 0 0 0;
   top: 150px;
   left: 760px;
 }
@@ -87,8 +87,8 @@ a{
 /* Slider */
 .slider {
   position: relative;
-  width: 720px;       /* ancho visible del slider */
-  margin: auto;
+  width: 850px;       /* ancho visible del slider */
+  left: -100px;
   overflow: visible;   /* esconde lo que está fuera */
 }
 
@@ -107,7 +107,7 @@ a{
 
 /* Tarjetas */
 .card {
-  flex: 0 0 350px;  /* ancho fijo de tarjeta */
+  flex: 0 0 300px;  /* ancho fijo de tarjeta */
   height: 250px;
   border-radius: 8px;
   position: relative;
@@ -122,12 +122,14 @@ a{
 
 .badge {
   position: absolute;
-  bottom: 15px;
-  left: 15px;
-  background: #e5e5e5;
-  padding: 6px 14px;
+  bottom: 5px;
+  left: 25px;
+  color: white;
+  border: solid black;
+  background: linear-gradient(to top, #636363, #6666665b);    
+  padding: 11px 30px;
   border-radius: 20px;
-  font-size: 14px;
+  font-size: 20px;
 }
 
 /* Flechas */
@@ -146,11 +148,11 @@ a{
 }
 
 .arrow.left {
-  left: -20px;   /* ajusta según tu diseño */
+  left: -30px;   /* ajusta según tu diseño */
 }
 
 .arrow.right {
-  right: -15px;  /* ajusta según tu diseño */
+  right: -45px;  /* ajusta según tu diseño */
 }
 
 /* Barra de progreso (opcional) */
