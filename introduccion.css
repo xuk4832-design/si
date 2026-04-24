@@ -1,0 +1,296 @@
+body{
+    display: flex;
+    justify-content: center;
+    margin: 0;
+    background-image: url(image/stars.avif);
+}
+
+/* Container */
+.page-container{
+    position: relative;
+    width: 100vw;   /* 100% del ancho de la ventana */
+    height: 100vh;  /* 100% de la altura de la ventana */
+    overflow: hidden;
+}
+
+/* Video fondo */
+.bg-video{
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    position: absolute;
+    z-index: 0;
+}
+
+/* Capa delante (overlay) */
+
+.explanation{
+    width: 100%;
+    height: 100%;
+    background-color: rgba(100, 108, 112, 0.538);
+    position: absolute;
+    z-index: 1;
+    pointer-events: none;
+}
+
+
+
+/*Welcome*/
+
+.welcome{
+    font-size: 17px;
+    text-align: center;
+    display: flex;
+    justify-content: center;
+    gap: 1000px;
+    border:  solid 10px rgb(56, 56, 56);
+    border-radius: 20px;
+    background-color: rgba(242, 242, 242, 0.874);
+    margin: 0px;
+    padding: 20px;
+    color: rgb(0, 0, 0);
+}
+
+/*Buttons*/
+
+.content {
+    display: flex;
+    justify-content: center;
+    position: relative;
+    z-index: 2;
+    margin-top: 860px;
+    gap: 60px;
+    align-items: center;
+    text-align: center;
+}
+
+#como {
+    transition: transform 0.3s ease; /* animación suave */
+}
+
+/* 👇 solo cuando pasas el ratón */
+#como:hover {
+    transform: scale(1.08);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+}
+
+#jugar{
+    transition: transform 0.3s ease; /* animación suave */
+}
+
+#jugar:hover {
+    transform: scale(1.08);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+}
+
+#content > .contents:nth-child(2) {
+    transition: transform 0.3s ease;
+}
+
+#content > .contents:nth-child(2):hover {
+    transform: scale(1.08);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+}
+
+button{
+    padding: 28px 50px;
+    font-size: 22px;
+    border: none;
+    color: #000;
+    border-radius: 14px;
+    cursor: pointer;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: all 0.25s ease;
+}
+
+#como button {
+    background: linear-gradient(135deg, #facc15, #eab308);
+    color: #000;
+}
+
+#content > .contents:nth-child(2) button {
+    background-color: white;
+    color: #000;
+}
+
+#jugar button {
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+    color: #fff;
+    box-shadow: 0 4px 18px rgba(34, 197, 94, 0.5);
+}
+
+#content {
+    justify-content: center;
+    position: relative;
+    z-index: 2;
+    margin-top: 800px;
+    gap: 40px;
+    align-items: center;
+    text-align: center;
+}
+
+.contents button:hover {
+    opacity: 0.98;
+}
+
+/*Palabras*/
+
+p{
+    margin: 0px;
+}
+
+
+
+    .buttons{
+        display: flex;
+        width: 100%;
+        position: absolute;
+        justify-content: center;
+        z-index: 2;
+        bottom: -40px; /* 👈 los baja dentro del contenedor */
+        left: 0;
+        gap: 830px;
+    }
+
+    .previous{
+        margin-bottom: 100px;
+        border-radius: 10px;
+        border: solid 1px black;
+        text-align: center;
+        font-size: 30px;
+    }
+
+    .next{
+        margin-bottom: 100px;
+        border-radius: 10px;
+        text-align: center;
+        font-size: 30px;
+    }
+
+.hidden {
+    display: none !important;
+}
+
+/*Content-2*/
+
+.content-2{
+    display: flex;
+    justify-content: center;
+    position: relative;
+    z-index: 2;
+    gap: 100px;
+    align-items: center;
+    text-align: center;
+}
+
+.contents-2{
+    display: flex;
+    position: relative;
+    justify-content: center;
+    margin: 20px 0 0 0;
+    width: 600px;
+    padding: 20px;
+    align-items: center;
+    flex-direction: column;
+    border: solid 1px black;
+    border-radius: 10px;
+    background-color: rgba(255, 255, 255, 0.8);
+}
+
+.contents-2 p{
+    margin: 0;
+    font-size: 24px;
+}
+.content-2 h2{
+    margin: 0;
+    font-size: 36px;
+}
+
+.content-2 img{
+    width: 600px;
+}
+
+.bg-video-2{
+    width: 600px;
+    z-index: 0;
+    padding-top: 50px;
+}
+
+
+/*Flecha*/
+.flecha-1{
+    width: 50px;
+    height: 50px;
+    position: absolute;
+    rotate: 180deg;
+    left: 650px;
+    top: 250px;
+}
+
+.flecha-1 img{
+    width: 300px;
+    height: 100px;
+}
+
+
+.flecha-2{
+    width: 100px;
+    height: 50px;
+    position: absolute;
+    rotate: 180deg;
+    left: 500px;
+    margin-top: 100px;
+}
+
+.flecha-2 img{
+    width: 300px;
+    height: 100px;
+}
+
+.flecha-3{
+    width: 100px;
+    height: 50px;
+    position: absolute;
+    rotate: 180deg;
+    left: 500px;
+    margin-top: 190px;
+}
+
+.flecha-3 img{
+    width: 300px;
+    height: 100px;
+}
+
+.flecha-4{
+    width: 100px;
+    height: 50px;
+    position: absolute;
+    rotate: 180deg;
+    left: 500px;
+    margin-top: 270px;
+}
+
+.flecha-4 img{
+    width: 300px;
+    height: 100px;
+}
+
+/*Manual*/
+
+.manual {
+    position: absolute;
+    top: 650px;
+    left: 50%;
+
+    transform: translate(-50%, -50%);
+    width: 300px;
+    padding: 20px;
+    text-align: center;
+    border: solid 2px black;
+    border-radius: 10px;
+    background-color: rgba(255, 255, 133, 0.9);
+
+    z-index: 10; /* 👈 por encima de explanation */
+}

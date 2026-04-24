@@ -1,0 +1,1150 @@
+// Canvas i context
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const laneCount = 4;
+const laneWidth = canvas.width / laneCount;
+const tipoCarretera = 'travesia';
+
+// Llegir vehicle de localStorage
+const selectedVehicle = localStorage.getItem('selectedVehicle') || 'Turismo';
+
+const vehicleTypes = ['Turismo', 'VMP', 'Motocicleta', 'Ciclos', 'Camiones'];
+const vehicleImageMap = {
+  turismo: '../../png-autos/turismo.png',
+  vmp: '../../png-autos/patinete electrico.png',
+  motocicleta: '../../png-autos/moto_avatar_si.png',
+  ciclos: '../../png-autos/ciclo.png',
+  camiones: '../../png-autos/camion.png'
+};
+const vehicleImages = {};
+Object.entries(vehicleImageMap).forEach(([type, src]) => {
+  const img = new Image();
+  img.src = src;
+  vehicleImages[type] = img;
+});
+
+function getVehicleImage(type) {
+  return vehicleImages[type.toLowerCase()] || null;
+}
+
+const speedLimits = {
+  urbana: 50,
+  interurbana: 120,
+  travesia: 60,
+  'turismo-interurbana': 120
+};
+
+// Velocitat ambiental (controlada per fletxes amunt/avall)
+let minSpeed = 10;
+let maxSpeed = 180;
+
+const lowerVehicle = selectedVehicle.toLowerCase();
+if (lowerVehicle === 'vmp' || lowerVehicle === 'ciclos') {
+  maxSpeed = 45;
+}
+
+let acceleration = 1;
+let speed = 40; // Velocidad inicial bajo el límite de travesía (50 km/h)
+
+// Debuffs i estat
+let intox = 0;
+let distract = 0;
+let penalties = 0;
+const maxPenalties = 5; // Máximo de sanciones permitidas
+let reactionDelay = 0;
+let invert = false;
+let gameOver = false;
+let gameStartTime = Date.now();
+let lastFrameTime = Date.now();
+let distanceKm = 0;
+const distanceGoalKm = 1;
+
+// Seguiment dels canvis de carril per detectar infraccions
+let lastCarLane = -1;
+let lastSpeedCheckTime = 0;
+let lastLaneChangeTime = 0;
+let wasOverSpeed = false;
+let nearMissCooldown = new Set();
+const nearMissDistance = 120;
+const rapidLaneChangeWindowMs = 1200;
+
+// Cotxe - Apareix a la dreta o esquerra
+const car = {
+  x: (Math.random() < 0.5 ? 0 : 3) * laneWidth + (laneWidth - 40) / 2,
+  y: canvas.height - 130,
+  w: 40,
+  h: 60,
+  speedX: 0,
+  speedY: 0
+};
+
+// Mur al mig dels quatre carrils
+const wall = {
+  x: laneWidth * 2 - 5,
+  y: 0,
+  w: 10,
+  h: canvas.height
+};
+
+// Paràmetres de la velocitat del jugador
+const playerBaseSpeed = 3.5;
+const playerSpeedCap = 9;
+const obstacleForwardFactor = 2;
+const obstacleLookAheadDistance = 190;
+const obstacleFollowDistance = 140;
+const obstacleOvertakeTriggerDistance = 155;
+const obstacleLaneChangeClearance = 130;
+const obstacleMinSpeedAdvantage = 0.35;
+const obstacleMinLaneHoldMs = 450;
+const obstacleSpeedVariance = 0.45;
+const obstacleMinSafetyDistance = 75;
+const obstacleMaxSafetyDistance = 180;
+const obstacleSafetySpeedFactor = 16;
+const obstacleRelativeSafetyFactor = 28;
+const obstacleLookAheadBuffer = 80;
+const obstacleReturnLaneDelayMs = 800;
+const obstacleSpawnClearance = 170;
+let nextObstacleId = 1;
+
+// Obstacles
+let obstacles = [];
+let maxObstacles = 6;
+let baseSpawnRate = 0.006;
+let spawnRate = baseSpawnRate;
+let spawnInterval = 50;
+let spawnCooldown = 0;
+
+// Esdeveniments R/Q
+let baseEventRate = 0.0006;
+let eventRate = baseEventRate;
+let currentEvent = null;
+let eventTimeout = null;
+let eventStartTime = 0;
+let resistCount = 0;
+
+const events = [
+  { text: "La cervesa freda et tempta 🍺", a: 20, d: 0 },
+  { text: "Els teus amics fan un somni", a: 20, d: 0 },
+  { text: "Et sents invencible", a: 60, d: 0 },
+  { text: "Et crida la teva ex 📞", a: 0, d: 50 },
+  { text: "Vols canviar la música 🎵", a: 0, d: 40 },
+  { text: "Creus haver vist a una persona famosa", a: 0, d: 80 },
+  { text: "Notificació del mòbil 📱", a: 0, d: 20 },
+  { text: "T'ofereixen un tabac 🚬", a: 20, d: 40 }
+];
+
+const roadRuleSets = {
+  urbana: [
+    "Respectar límits de velocitat i senyals en zona urbana.",
+    "Mantenir distància amb vianants, ciclistes i transport públic.",
+    "No canviar de carril de forma brusc; usar intermitents.",
+    "Assegurar pas en semàfors i passos de vianants."
+  ],
+  interurbana: [
+    "Manté la distància de seguretat en la carretera.",
+    "Avança només quan sigui segur i senyalitza amb temps.",
+    "Redueix velocitat en corbes i zones amb menor visibilitat.",
+    "No uses el carril d'emergència a menys que sigui imprescindible."
+  ],
+  'turismo-interurbana': [
+    "Viatges de turisme: descansa cada hora i no et apressuris.",
+    "Planifica la ruta i revisa l'estat de la carretera abans de sortir.",
+    "Condueixes sobri i evita distraccions en vies turístiques.",
+    "Adapta la velocitat a l'entorn i a les condicions climàtiques."
+  ]
+};
+
+const vehicleRuleSets = {
+  Turismo: [
+    "Turisme: controla la velocitat i usa cinturó en tot moment.",
+    "Evita maniobres bruscas en zones urbanes i carretera turística.",
+    "Manté l'atenció en l'entorn i en la senyalització."
+  ],
+  Autobus: [
+    "Autobús: més distància de seguretat i cura amb passatgers.",
+    "Respecta les parades autoritzades i evita frenades bruscas.",
+    "Si és necessari, redueix velocitat abans de fer una parada."
+  ],
+  VMP: [
+    "VMP: velocitat limitada, usa casc i permaneix visible.",
+    "Respecta els carrils ciclistes i la jerarquia de passos de vianants.",
+    "No invadeixis trajectòries de vehicles més grans."
+  ],
+  Motocicleta: [
+    "Motocicleta: protegeix el teu cap i usa roba visible.",
+    "Augmenta la distància de frenada en condicions adverses.",
+    "Evita punts cecs i no et desplacis entre vehicles."
+  ],
+  Ciclos: [
+    "Cicles: usa carril bici sempre que estigui disponible.",
+    "Respecta semàfors i no circules per voreres de vianants.",
+    "Manté't estable i senyalitza els girs amb antelació."
+  ],
+  Camiones: [
+    "Camió: funciona amb més inèrcia, frena amb anticipació.",
+    "Coneix els teus punts cecs i senyalitza amb temps.",
+    "Controla el pes i no excedeixis la velocitat permesa."
+  ],
+  default: [
+    "Condueixes amb atenció, adapta la teva velocitat i respecta les regles."
+  ]
+};
+
+let gameOverReason = null;
+let gameOverDetail = '';
+let redirectScheduled = false;
+
+function setGameOverReason(reason) {
+  if (gameOverReason === 'alcohol') return;
+  gameOverReason = reason;
+}
+
+function setGameOverDetail(detail) {
+  gameOverDetail = detail;
+}
+
+function renderRules() {
+  const roadContainer = document.getElementById('roadRules');
+  const vehicleContainer = document.getElementById('vehicleRules');
+  const rules = roadRuleSets[tipoCarretera] || roadRuleSets.interurbana;
+  const vehicleRules = vehicleRuleSets[selectedVehicle] || vehicleRuleSets.default;
+
+  if (roadContainer) roadContainer.innerHTML = rules.map(rule => `<div class="rule-entry">${rule}</div>`).join('');
+  if (vehicleContainer) vehicleContainer.innerHTML = vehicleRules.map(rule => `<div class="rule-entry">${rule}</div>`).join('');
+}
+
+function formatRoadName(road) {
+  switch (road) {
+    case 'urbana': return 'Urbana';
+    case 'interurbana': return 'Interurbana';
+    case 'travesia': return 'Travessia';
+    case 'turismo-interurbana': return 'Turisme Interurbana';
+    default: return 'Carretera';
+  }
+}
+
+function getVehicleLabel(vehicle) {
+  switch (vehicle.toLowerCase()) {
+    case 'turismo': return 'Turismo';
+    case 'autobus': return 'Autobús';
+    case 'vmp': return 'VMP';
+    case 'motocicleta': return 'Motocicleta';
+    case 'ciclos': return 'Cicles';
+    case 'camiones': return 'Camió';
+    default: return vehicle;
+  }
+}
+
+function renderPageHeader() {
+  const title = document.querySelector('.game-title');
+  const subtitle = document.querySelector('.game-subtitle');
+  const description = document.querySelector('.game-description');
+  const pageTitle = `${getVehicleLabel(selectedVehicle)} - ${formatRoadName(tipoCarretera)}`;
+
+  if (title) title.textContent = 'PIXEL DRIVER: CIUTAT SEGURA';
+  if (subtitle) subtitle.textContent = pageTitle;
+  if (description) description.textContent = `Condueix amb ${getVehicleLabel(selectedVehicle)} en una via ${formatRoadName(tipoCarretera)}.`;
+  document.title = `PIXEL DRIVER | ${pageTitle}`;
+}
+
+function navigateOnCrash() {
+  if (redirectScheduled) return;
+  redirectScheduled = true;
+  const params = new URLSearchParams();
+  params.set('vehicle', selectedVehicle);
+  if (gameOverDetail) params.set('reason', gameOverDetail);
+  params.set('road', tipoCarretera);
+  let target = `../../choque.html?${params.toString()}`;
+  if (gameOverReason === 'infraccion') target = `../../infraccion.html?${params.toString()}`;
+  setTimeout(() => { window.location.href = target; }, 1400);
+}
+
+// --- Dibuix ---
+function drawRoad() {
+  ctx.fillStyle = "#333";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Dibuixar carrils amb regles de trànsit
+  if (tipoCarretera === 'urbana') {
+    ctx.strokeStyle = "#fff";
+    ctx.lineWidth = 4;
+    ctx.setLineDash([]);
+  } else {
+    ctx.strokeStyle = "#666";
+    ctx.lineWidth = 2;
+    ctx.setLineDash([10, 10]);
+  }
+
+  for (let i = 1; i < laneCount; i++) {
+    const x = i * laneWidth;
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, canvas.height);
+    ctx.stroke();
+  }
+
+  ctx.setLineDash([]);
+
+  // Dibuixar mur
+  ctx.fillStyle = "#888";
+  ctx.fillRect(wall.x, wall.y, wall.w, wall.h);
+
+  // Regles de trànsit
+  let regla = "";
+  if (tipoCarretera === 'urbana') regla = "Travessia: Atenci00f3 a vianants";
+  else if (tipoCarretera === 'interurbana') regla = "Carretera interurbana: Avançar amb precaució";
+  else if (tipoCarretera === 'travesia') regla = "Travessia: Atenció a vianants";
+  else regla = "Turisme interurbana: Respecta senyals";
+
+  ctx.fillStyle = "#cbd5e0";
+  ctx.font = "24px Arial";
+  ctx.fillText(regla, 10, 30);
+}
+
+function drawCar() {
+  const vehicleType = selectedVehicle.toLowerCase();
+  const img = getVehicleImage(vehicleType);
+  if (img && img.complete && img.naturalWidth > 0) {
+    ctx.drawImage(img, car.x, car.y, car.w, car.h);
+  } else {
+    let color = "lightblue";
+    let text = "Turismo";
+    switch(vehicleType) {
+      case 'turismo':
+        color = "lightblue";
+        text = "Turismo";
+        break;
+      case 'autobus':
+        color = "lightyellow";
+        text = "Autobús";
+        break;
+      case 'vmp':
+        color = "lightgoldenrodyellow";
+        text = "VMP";
+        break;
+      case 'motocicleta':
+        color = "lightcoral";
+        text = "Motocicleta";
+        break;
+      case 'ciclos':
+        color = "lightgreen";
+        text = "Ciclos";
+        break;
+      case 'camiones':
+        color = "#D2B48C";
+        text = "Camiones";
+        break;
+    }
+    ctx.fillStyle = color;
+    ctx.fillRect(car.x, car.y, car.w, car.h);
+    ctx.strokeStyle = "black";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(car.x, car.y, car.w, car.h);
+    ctx.fillStyle = "black";
+    ctx.font = "15px Arial";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(text, car.x + car.w/2, car.y + car.h/2);
+  }
+}
+
+function getPlayerLane() {
+  const lane = Math.floor((car.x + car.w / 2) / laneWidth);
+  return Math.max(0, Math.min(laneCount - 1, lane));
+}
+
+function getLaneX(lane, width) {
+  return lane * laneWidth + (laneWidth - width) / 2;
+}
+
+function getAdjacentLane(lane) {
+  if (lane < 2) return lane === 0 ? 1 : 0;
+  return lane === 2 ? 3 : 2;
+}
+
+function occupiesLane(entity, lane) {
+  return entity.lane === lane || (entity.changingLane && entity.previousLane === lane);
+}
+
+function getObstacleTrafficSpeed(obstacle) {
+  return obstacle.speed * obstacleForwardFactor;
+}
+
+function getObstacleCruiseSpeed(obstacle) {
+  return obstacle.cruiseTrafficSpeed ?? getObstacleTrafficSpeed(obstacle);
+}
+
+function getPlayerTrafficSpeed(direction) {
+  const projectedSpeed = direction === -1 ? -car.speedY : car.speedY;
+  return Math.max(0, projectedSpeed);
+}
+
+function getSignedClearDistance(origin, target, direction) {
+  if (direction === -1) {
+    const aheadGap = origin.y - (target.y + target.h);
+    if (aheadGap >= 0) return aheadGap;
+
+    const behindGap = target.y - (origin.y + origin.h);
+    if (behindGap >= 0) return -behindGap;
+
+    return 0;
+  }
+
+  const aheadGap = target.y - (origin.y + origin.h);
+  if (aheadGap >= 0) return aheadGap;
+
+  const behindGap = origin.y - (target.y + target.h);
+  if (behindGap >= 0) return -behindGap;
+
+  return 0;
+}
+
+function isObstacleAheadOfPlayer(obstacle) {
+  const obstacleCenterY = obstacle.y + obstacle.h / 2;
+  const playerCenterY = car.y + car.h / 2;
+  return obstacleCenterY < playerCenterY;
+}
+
+function getObstacleSafetyDistance(obstacle, blockerSpeed = 0) {
+  const cruiseSpeed = getObstacleCruiseSpeed(obstacle);
+  const baseGap = 65 + cruiseSpeed * obstacleSafetySpeedFactor;
+  const closingGap = Math.max(0, cruiseSpeed - blockerSpeed) * obstacleRelativeSafetyFactor;
+  return Math.max(
+    obstacleMinSafetyDistance,
+    Math.min(obstacleMaxSafetyDistance, baseGap + closingGap)
+  );
+}
+
+function getObstacleLookAheadDistanceFor(obstacle, blockerSpeed = 0) {
+  return Math.max(
+    obstacleLookAheadDistance,
+    getObstacleSafetyDistance(obstacle, blockerSpeed) + obstacleLookAheadBuffer
+  );
+}
+
+function getObstacleLaneChangeClearances(obstacle, blockerSpeed = 0) {
+  const safetyDistance = getObstacleSafetyDistance(obstacle, blockerSpeed);
+  return {
+    front: Math.max(obstacleLaneChangeClearance, safetyDistance + 20),
+    rear: Math.max(obstacleLaneChangeClearance - 10, Math.round(safetyDistance * 0.8))
+  };
+}
+
+function getNearestAheadEntity(obstacle, lane = obstacle.lane) {
+  const direction = obstacle.direction;
+  let closest = null;
+  const playerLane = getPlayerLane();
+
+  if (playerLane === lane) {
+    const playerDistance = getSignedClearDistance(obstacle, car, direction);
+    if (playerDistance > 0) {
+      closest = {
+        kind: 'player',
+        distance: playerDistance,
+        speed: getPlayerTrafficSpeed(direction)
+      };
+    }
+  }
+
+  obstacles.forEach(other => {
+    if (other === obstacle || !occupiesLane(other, lane)) return;
+
+    const distance = getSignedClearDistance(obstacle, other, direction);
+    if (distance <= 0) return;
+
+    if (!closest || distance < closest.distance) {
+      closest = {
+        kind: 'obstacle',
+        distance: distance,
+        speed: other.currentTrafficSpeed ?? getObstacleCruiseSpeed(other),
+        obstacle: other
+      };
+    }
+  });
+
+  return closest;
+}
+
+function isLaneClearForChange(
+  obstacle,
+  targetLane,
+  frontClearance = obstacleLaneChangeClearance,
+  rearClearance = obstacleLaneChangeClearance
+) {
+  if ((targetLane < 2) !== (obstacle.lane < 2)) return false;
+
+  const playerLane = getPlayerLane();
+  if (playerLane === targetLane) {
+    const playerDistance = getSignedClearDistance(obstacle, car, obstacle.direction);
+    if (playerDistance >= 0 && playerDistance < frontClearance) return false;
+    if (playerDistance < 0 && Math.abs(playerDistance) < rearClearance) return false;
+  }
+
+  for (const other of obstacles) {
+    if (other === obstacle || !occupiesLane(other, targetLane)) continue;
+    const distance = getSignedClearDistance(obstacle, other, obstacle.direction);
+    if (distance >= 0 && distance < frontClearance) return false;
+    if (distance < 0 && Math.abs(distance) < rearClearance) return false;
+  }
+
+  return true;
+}
+
+function setObstacleLaneChange(obstacle, targetLane) {
+  obstacle.previousLane = obstacle.lane;
+  obstacle.lane = targetLane;
+  obstacle.targetX = getLaneX(targetLane, obstacle.w);
+  obstacle.changingLane = true;
+  obstacle.lastLaneChangeAt = Date.now();
+}
+
+function stopObstacleLaneChange(obstacle) {
+  obstacle.x = getLaneX(obstacle.lane, obstacle.w);
+  obstacle.targetX = obstacle.x;
+  obstacle.changingLane = false;
+  obstacle.previousLane = null;
+}
+
+function canRearVehicleOvertake(obstacle, blockerAhead) {
+  if (obstacle.changingLane || !blockerAhead || obstacle.lane !== obstacle.preferredLane) {
+    return false;
+  }
+
+  if (Date.now() - obstacle.lastLaneChangeAt < obstacleMinLaneHoldMs) {
+    return false;
+  }
+
+  if (isObstacleAheadOfPlayer(obstacle)) {
+    return false;
+  }
+
+  const ownSpeed = getObstacleCruiseSpeed(obstacle);
+  const lookAheadDistance = getObstacleLookAheadDistanceFor(obstacle, blockerAhead.speed);
+  const safetyDistance = getObstacleSafetyDistance(obstacle, blockerAhead.speed);
+  const triggerDistance = Math.min(
+    lookAheadDistance - 25,
+    Math.max(obstacleOvertakeTriggerDistance, safetyDistance + 35)
+  );
+  const isCloseEnough = blockerAhead.distance <= triggerDistance;
+  const isAheadVehicleSlower = ownSpeed > blockerAhead.speed + obstacleMinSpeedAdvantage;
+
+  return isCloseEnough && isAheadVehicleSlower;
+}
+
+function tryStartOvertake(obstacle, blockerAhead) {
+  if (!canRearVehicleOvertake(obstacle, blockerAhead)) {
+    return false;
+  }
+
+  const currentLane = obstacle.lane;
+  const targetLane = getAdjacentLane(currentLane);
+  const clearances = getObstacleLaneChangeClearances(obstacle, blockerAhead.speed);
+
+  if (!isLaneClearForChange(obstacle, targetLane, clearances.front, clearances.rear)) {
+    return false;
+  }
+
+  setObstacleLaneChange(obstacle, targetLane);
+  return true;
+}
+
+function shouldReturnToPreferredLane(obstacle) {
+  if (obstacle.changingLane || obstacle.lane === obstacle.preferredLane) {
+    return false;
+  }
+
+  if (Date.now() - obstacle.lastLaneChangeAt < obstacleReturnLaneDelayMs) {
+    return false;
+  }
+
+  if (isObstacleAheadOfPlayer(obstacle)) {
+    return false;
+  }
+
+  const blockerOnPreferredLane = getNearestAheadEntity(obstacle, obstacle.preferredLane);
+  if (blockerOnPreferredLane) {
+    const safetyDistance = getObstacleSafetyDistance(obstacle, blockerOnPreferredLane.speed);
+    if (blockerOnPreferredLane.distance < safetyDistance + 20) {
+      return false;
+    }
+  }
+
+  const clearances = getObstacleLaneChangeClearances(obstacle);
+  return isLaneClearForChange(
+    obstacle,
+    obstacle.preferredLane,
+    clearances.front,
+    clearances.rear
+  );
+}
+
+function tryReturnToPreferredLane(obstacle) {
+  if (!shouldReturnToPreferredLane(obstacle)) {
+    return false;
+  }
+
+  setObstacleLaneChange(obstacle, obstacle.preferredLane);
+  return true;
+}
+
+function updateObstacleLanePosition(obstacle) {
+  if (!obstacle.changingLane) {
+    obstacle.x = getLaneX(obstacle.lane, obstacle.w);
+    return;
+  }
+
+  const deltaX = obstacle.targetX - obstacle.x;
+  if (Math.abs(deltaX) <= obstacle.laneChangeSpeed) {
+    obstacle.x = obstacle.targetX;
+    obstacle.changingLane = false;
+    obstacle.previousLane = null;
+    return;
+  }
+
+  obstacle.x += Math.sign(deltaX) * obstacle.laneChangeSpeed;
+}
+
+function getObstacleMoveAmount(obstacle, blockerAhead) {
+  const ownSpeed = getObstacleCruiseSpeed(obstacle);
+  const currentSpeed = obstacle.currentTrafficSpeed ?? ownSpeed;
+
+  if (!blockerAhead) {
+    return Math.min(ownSpeed, currentSpeed + (obstacle.accelerationStep ?? 0.08));
+  }
+
+  const blockerSpeed = Math.max(0, blockerAhead.speed);
+  const safeDistance = getObstacleSafetyDistance(obstacle, blockerSpeed);
+  const lookAheadDistance = getObstacleLookAheadDistanceFor(obstacle, blockerSpeed);
+  const maxSafeSpeed = Math.max(0, blockerSpeed + blockerAhead.distance - safeDistance);
+
+  let desiredSpeed;
+
+  if (blockerAhead.distance <= 0) {
+    desiredSpeed = 0;
+  } else if (blockerAhead.distance <= safeDistance) {
+    desiredSpeed = maxSafeSpeed;
+  } else if (blockerAhead.distance >= lookAheadDistance) {
+    desiredSpeed = ownSpeed;
+  } else {
+    const ratio = (blockerAhead.distance - safeDistance) /
+      (lookAheadDistance - safeDistance);
+    desiredSpeed = blockerSpeed + (ownSpeed - blockerSpeed) * ratio;
+  }
+
+  desiredSpeed = Math.max(0, Math.min(ownSpeed, maxSafeSpeed, desiredSpeed));
+
+  if (desiredSpeed < currentSpeed) {
+    return desiredSpeed;
+  }
+
+  return Math.min(desiredSpeed, currentSpeed + (obstacle.accelerationStep ?? 0.08));
+}
+
+function isSafeDistance(lane, y, height = 60) {
+  const candidate = {
+    x: getLaneX(lane, 40),
+    y: y,
+    w: 40,
+    h: height,
+    lane: lane,
+    direction: lane < 2 ? -1 : 1
+  };
+  const playerLane = getPlayerLane();
+
+  if (lane === playerLane) {
+    const playerDistance = Math.abs(getSignedClearDistance(candidate, car, candidate.direction));
+    if (playerDistance < obstacleSpawnClearance) {
+      return false;
+    }
+  }
+
+  for (const other of obstacles) {
+    if (!occupiesLane(other, lane)) continue;
+
+    const distance = Math.abs(getSignedClearDistance(candidate, other, candidate.direction));
+    if (distance < obstacleSpawnClearance) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function spawnObstacle() {
+  const ow = 40;
+  const oh = 60;
+
+  let lane = Math.floor(Math.random() * laneCount);
+  const playerLane = getPlayerLane();
+  if (Math.random() < 0.2) {
+    lane = playerLane;
+  }
+
+  const x = getLaneX(lane, ow);
+
+  let type = vehicleTypes[Math.floor(Math.random() * vehicleTypes.length)];
+
+  let baseObstacleSpeed;
+  switch(type.toLowerCase()) {
+    case 'camiones':
+      baseObstacleSpeed = 1.2;
+      break;
+    case 'autobus':
+      baseObstacleSpeed = 1.5;
+      break;
+    case 'ciclos':
+    case 'vmp':
+      baseObstacleSpeed = 1;
+      break;
+    case 'motocicleta':
+      baseObstacleSpeed = 2.5;
+      break;
+    default:
+      baseObstacleSpeed = 2;
+  }
+  baseObstacleSpeed *= 0.85 + Math.random() * obstacleSpeedVariance;
+
+  let y;
+  let attempts = 0;
+  const maxAttempts = 10;
+
+  do {
+    const isLeftSide = lane < 2;
+    y = isLeftSide
+      ? canvas.height + oh + Math.random() * 200
+      : -oh - Math.random() * 200;
+    attempts++;
+  } while (!isSafeDistance(lane, y, oh) && attempts < maxAttempts);
+
+  const cruiseTrafficSpeed = getObstacleTrafficSpeed({ speed: baseObstacleSpeed });
+
+  obstacles.push({
+    id: nextObstacleId++,
+    x: x,
+    y: y,
+    w: ow,
+    h: oh,
+    lane: lane,
+    direction: lane < 2 ? -1 : 1,
+    speed: baseObstacleSpeed,
+    type: type,
+    cruiseTrafficSpeed: cruiseTrafficSpeed,
+    currentTrafficSpeed: cruiseTrafficSpeed,
+    previousLane: null,
+    preferredLane: lane,
+    targetX: x,
+    changingLane: false,
+    laneChangeSpeed: 2 + Math.random() * 0.8,
+    accelerationStep: 0.06 + Math.random() * 0.05,
+    lastLaneChangeAt: Date.now()
+  });
+}
+
+function updateObstacles() {
+  const orderedObstacles = [...obstacles].sort((a, b) => {
+    if (a.direction !== b.direction) {
+      return a.direction - b.direction;
+    }
+    return a.direction === -1 ? a.y - b.y : b.y - a.y;
+  });
+
+  for (const o of orderedObstacles) {
+    const obstacleAheadOfPlayer = isObstacleAheadOfPlayer(o);
+    if (obstacleAheadOfPlayer && o.changingLane) {
+      stopObstacleLaneChange(o);
+    }
+
+    if (!obstacleAheadOfPlayer) {
+      tryReturnToPreferredLane(o);
+    }
+
+    let blockerAhead = getNearestAheadEntity(o);
+    if (!obstacleAheadOfPlayer) {
+      const startedOvertake = tryStartOvertake(o, blockerAhead);
+      if (startedOvertake) {
+        blockerAhead = getNearestAheadEntity(o);
+      }
+    }
+
+    const activeBlocker = blockerAhead;
+    const moveAmount = getObstacleMoveAmount(o, activeBlocker);
+    o.currentTrafficSpeed = moveAmount;
+
+    if (moveAmount > 0.05) {
+      o.y += o.direction * moveAmount;
+    }
+    updateObstacleLanePosition(o);
+  }
+
+  obstacles = obstacles.filter(o => o.y < canvas.height + 100 && o.y > -200);
+}
+
+function drawObstacles() {
+  obstacles.forEach(o => {
+    const img = getVehicleImage(o.type);
+    if (img && img.complete && img.naturalWidth > 0) {
+      ctx.drawImage(img, o.x, o.y, o.w, o.h);
+    } else {
+      let color;
+      switch(o.type.toLowerCase()) {
+        case 'turismo':
+          color = "lightblue";
+          break;
+        case 'autobus':
+          color = "lightyellow";
+          break;
+        case 'vmp':
+          color = "lightgoldenrodyellow";
+          break;
+        case 'motocicleta':
+          color = "lightcoral";
+          break;
+        case 'ciclos':
+          color = "lightgreen";
+          break;
+        case 'camiones':
+          color = "#D2B48C";
+          break;
+        default:
+          color = "lightgray";
+      }
+      ctx.fillStyle = color;
+      ctx.fillRect(o.x, o.y, o.w, o.h);
+      ctx.strokeStyle = "black";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(o.x, o.y, o.w, o.h);
+      ctx.fillStyle = "black";
+      ctx.font = "15px Arial";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(getVehicleLabel(o.type), o.x + o.w/2, o.y + o.h/2);
+    }
+  });
+}
+
+function checkRuleViolations() {
+  const currentLane = getPlayerLane();
+  const now = Date.now();
+
+  if (lastCarLane === -1) {
+    lastCarLane = currentLane;
+  } else if (currentLane !== lastCarLane) {
+    if (lastLaneChangeTime && now - lastLaneChangeTime < rapidLaneChangeWindowMs) {
+      penalties += 1;
+      console.log(`⚠️ Sanción #${penalties}: Cambio brusco de carril`);
+    }
+
+    lastLaneChangeTime = now;
+    lastCarLane = currentLane;
+  }
+
+  const speedLimit = speedLimits[tipoCarretera] || 90;
+  if (speed > speedLimit && !wasOverSpeed) {
+    penalties += 1;
+    console.log(`🚨 Sanción #${penalties}: Exceso de velocidad (${Math.round(speed)} km/h > ${speedLimit} km/h)`);
+    wasOverSpeed = true;
+  } else if (speed <= speedLimit) {
+    wasOverSpeed = false;
+  }
+
+  if (penalties >= 12 && !gameOver) {
+    gameOver = true;
+    setGameOverDetail("Has acumulat massa sancions durant la conduccio.");
+    setGameOverReason('infraccion');
+  }
+}
+
+function checkNearMiss() {
+  const playerLane = getPlayerLane();
+
+  obstacles.forEach((o, index) => {
+    const distX = Math.abs(car.x - o.x);
+    const distY = Math.abs(car.y - o.y);
+    const closeEnough =
+      o.lane === playerLane &&
+      distX < nearMissDistance &&
+      distY < nearMissDistance;
+
+    const key = `${index}`;
+
+    if (closeEnough) {
+      if (!nearMissCooldown.has(key)) {
+        penalties += 1;
+        nearMissCooldown.add(key);
+        console.log("⚠️ Near miss voluntario +1 sanción. Total:", penalties);
+      }
+    } else {
+      nearMissCooldown.delete(key);
+    }
+  });
+}
+
+function collision() {
+  // Colisió amb obstacles
+  for (let o of obstacles) {
+    if (
+      car.x < o.x + o.w &&
+      car.x + car.w > o.x &&
+      car.y < o.y + o.h &&
+      car.y + car.h > o.y
+    ) {
+      gameOver = true;
+      setGameOverDetail("Has col·lisionat amb un altre vehicle.");
+      setGameOverReason('choque');
+      break;
+    }
+  }
+
+  // Colisió amb mur
+  if (
+    car.x < wall.x + wall.w &&
+    car.x + car.w > wall.x &&
+    car.y < wall.y + wall.h &&
+    car.y + car.h > wall.y
+  ) {
+    gameOver = true;
+    setGameOverDetail("Has xocat amb un obstacle lateral.");
+    setGameOverReason('choque');
+  }
+}
+
+function updateBars() {
+  document.getElementById("alcohol").style.width = intox + "%";
+  document.getElementById("alcohol-value").textContent = intox + "%";
+  document.getElementById("distract").style.width = distract + "%";
+  document.getElementById("distract-value").textContent = distract + "%";
+  document.getElementById("penalties-value").textContent = penalties; // Mostrar número de sanciones
+}
+
+function applyDebuffs() {
+  reactionDelay = intox >= 40 ? 300 : 0;
+  invert = intox >= 80;
+
+  if (intox >= 100) {
+    gameOver = true;
+    setGameOverDetail("Conduccio impossible per consum d'alcohol.");
+    setGameOverReason('alcohol');
+  }
+
+  if (distract >= 100 && gameOverReason !== 'alcohol') {
+    gameOver = true;
+    setGameOverDetail("La distraccio ha provocat un accident.");
+    setGameOverReason('choque');
+  }
+}
+
+
+function randomEvent() {
+  const e = events[Math.floor(Math.random() * events.length)];
+  const eventElement = document.getElementById("event");
+  if (eventElement) {
+    eventElement.textContent = e.text;
+  }
+  currentEvent = e;
+  eventStartTime = Date.now();
+  resistCount = 0;
+
+  if (eventTimeout) clearTimeout(eventTimeout);
+
+  eventTimeout = setTimeout(() => {
+    if (currentEvent === e) {
+      intox = Math.min(100, intox + currentEvent.a);
+      distract = Math.min(100, distract + currentEvent.d);
+      applyDebuffs();
+      updateBars();
+      currentEvent = null;
+      const promptElement = document.getElementById("eventPrompt");
+      if (promptElement) {
+        promptElement.textContent = "";
+      }
+    }
+  }, 5000);
+
+  updateEventPromptDisplay();
+}
+
+function updateEventPromptDisplay() {
+  if (!currentEvent) return;
+  const elapsed = (Date.now() - eventStartTime) / 1000;
+  const remaining = Math.max(0, 5 - elapsed);
+  const promptElement = document.getElementById("eventPrompt");
+  if (promptElement) {
+    promptElement.textContent =
+      `Prem R per resistir (${resistCount}/10), Q per acceptar (${remaining.toFixed(1)}s)`;
+  }
+}
+
+// --- Input ---
+const keysDown = {};
+let lastInputChangeTime = 0;
+
+document.addEventListener('keydown', (e) => {
+  const key = e.key;
+  if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "w", "a", "s", "d", "W", "A", "S", "D"].includes(key)) {
+    e.preventDefault();
+  }
+
+  if (currentEvent) {
+    if (key.toLowerCase() === 'r') {
+      resistCount++;
+      if (resistCount >= 10) {
+        if (eventTimeout) clearTimeout(eventTimeout);
+        currentEvent = null;
+        resistCount = 0;
+        const promptElement = document.getElementById("eventPrompt");
+        if (promptElement) {
+          promptElement.textContent = "";
+        }
+      } else {
+        updateEventPromptDisplay();
+      }
+      return;
+    }
+
+    if (key.toLowerCase() === 'q') {
+      if (eventTimeout) clearTimeout(eventTimeout);
+      intox = Math.min(100, intox + currentEvent.a);
+      distract = Math.min(100, distract + currentEvent.d);
+      applyDebuffs();
+      updateBars();
+      currentEvent = null;
+      resistCount = 0;
+      const promptElement = document.getElementById("eventPrompt");
+      if (promptElement) {
+        promptElement.textContent = "";
+      }
+      return;
+    }
+  }
+
+  keysDown[key] = true;
+  lastInputChangeTime = Date.now();
+});
+
+document.addEventListener('keyup', (e) => {
+  delete keysDown[e.key];
+  lastInputChangeTime = Date.now();
+});
+
+// --- Loop principal ---
+function loop() {
+  if (gameOver) {
+    ctx.fillStyle = "rgba(0,0,0,0.7)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#cbd5e0";
+    ctx.font = "36px Arial";
+    let message = "";
+    if (gameOverReason === 'alcohol') message = "🚫 CONDUCCIÓ EBRIA";
+    else if (gameOverReason === 'infraccion') message = "🚫 DEMASIADAS INFRACCIONES";
+    else if (gameOverReason === 'goal') message = "🎉 OBJECTIU ASSOLIT";
+    else message = "💥 ACCIDENT 💥";
+    ctx.fillText(message, canvas.width / 2 - 108, canvas.height / 2 - 10);
+    ctx.font = "21px Arial";
+    if (gameOverReason === 'goal') {
+      ctx.fillText("Partida finalitzada", canvas.width / 2 - 70, canvas.height / 2 + 20);
+      return;
+    }
+    ctx.fillText("Redirigint...", canvas.width / 2 - 56, canvas.height / 2 + 20);
+    navigateOnCrash();
+    return;
+  }
+
+  if (keysDown["ArrowUp"]) {
+    speed = Math.min(maxSpeed, speed + acceleration);
+  }
+  if (keysDown["ArrowDown"]) {
+    speed = Math.max(minSpeed, speed - acceleration);
+  }
+
+  const now = Date.now();
+  if (now - lastInputChangeTime >= reactionDelay) {
+    const w = keysDown["w"] || keysDown["W"];
+    const a = keysDown["a"] || keysDown["A"];
+    const s = keysDown["s"] || keysDown["S"];
+    const d = keysDown["d"] || keysDown["D"];
+
+    const multiplier = speed / 60;
+    const scaled = playerBaseSpeed * multiplier;
+    const playerSpeed = Math.min(playerSpeedCap, Math.max(1, scaled));
+
+    if (a && !d) {
+      car.speedX = invert ? playerSpeed : -playerSpeed;
+    } else if (d && !a) {
+      car.speedX = invert ? -playerSpeed : playerSpeed;
+    } else {
+      car.speedX = 0;
+    }
+
+    if (w && !s) {
+      car.speedY = -playerSpeed;
+    } else if (s && !w) {
+      car.speedY = playerSpeed;
+    } else {
+      car.speedY = 0;
+    }
+  }
+
+  car.x += car.speedX;
+  car.y += car.speedY;
+
+  // Mantenir el cotxe dins dels límits (fixat)
+  if (car.x < 0) car.x = 0;
+  if (car.x + car.w > canvas.width) car.x = canvas.width - car.w;
+  if (car.y < 0) car.y = 0;
+  if (car.y + car.h > canvas.height) car.y = canvas.height - car.h;
+
+  drawRoad();
+  drawCar();
+  drawObstacles();
+
+  updateObstacles();
+  collision();
+  checkRuleViolations();
+  checkNearMiss();
+
+  if (spawnCooldown > 0) spawnCooldown--;
+  if (spawnCooldown <= 0 && Math.random() < spawnRate && obstacles.length < maxObstacles) {
+    spawnObstacle();
+    spawnCooldown = spawnInterval;
+  }
+
+  if (Math.random() < eventRate) randomEvent();
+  if (currentEvent) updateEventPromptDisplay();
+
+  const elapsedSeconds = (Date.now() - gameStartTime) / 1000;
+  const difficultyMultiplier = 1 + (elapsedSeconds / 60);
+  eventRate = Math.min(0.001, baseEventRate * difficultyMultiplier);
+
+  applyDebuffs();
+  updateBars();
+
+  document.getElementById('speed').textContent = Math.round(speed);
+  const currentTime = Date.now();
+  const deltaSeconds = (currentTime - lastFrameTime) / 1000;
+  lastFrameTime = currentTime;
+  distanceKm += (speed / 3600) * deltaSeconds;
+  document.getElementById('distance').textContent = distanceKm.toFixed(2);
+  const remainingMeters = Math.max(0, Math.round((distanceGoalKm - distanceKm) * 1000));
+  document.getElementById('distance-left').textContent = remainingMeters;
+
+  // Aumentar spawnRate cuanto menos distancia al final
+  const progress = 1 - remainingMeters / (distanceGoalKm * 1000);
+  spawnRate = baseSpawnRate + progress * (0.02 - baseSpawnRate);
+
+  if (distanceKm >= distanceGoalKm && !gameOver) {
+    gameOver = true;
+    if (penalties > 0) {
+      setGameOverDetail("Has arribat al final, pero amb sancions pendents.");
+      setGameOverReason('infraccion');
+    } else {
+      setGameOverReason('goal');
+    }
+  }
+
+  requestAnimationFrame(loop);
+}
+
+renderRules();
+renderPageHeader();
+
+loop();

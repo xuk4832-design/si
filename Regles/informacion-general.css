@@ -1,0 +1,373 @@
+/*Body*/
+    body{
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        background-color: rgba(172, 172, 172, 0.982);
+    }
+
+/*Containers*/
+
+    .page{
+        width: 2100px;
+        height: 3200px;
+        margin: 100px;
+        background-color: rgba(172, 172, 172, 0.982);
+        border-radius: 20px;
+    }
+
+    .content{
+        background-color: white;
+        margin: 10px;
+        padding: 15px;
+        border-radius: 15px;
+        max-width: 700px;
+        display: flex;
+        flex-wrap: wrap;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        font-size: 30px;
+        font-weight: bold;
+        font-family: Arial, Helvetica, sans-serif;
+        color: #0066cc;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        transition: transform 0.3s, box-shadow 0.3s;
+    }
+
+
+    .content:hover{
+        transform: scale(1.05);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    }
+
+    .gallery{
+        display: flex;
+        justify-content: center;
+        max-height: 1300px;
+        flex-wrap: wrap;
+        gap: 20px;
+    }
+
+    .buttons{
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        padding: 50px 0 0 0 ;
+    }
+    .button-exit{
+        display: flex;
+        flex-wrap: wrap;
+        margin-right: 200px;
+        gap: 50px;
+    }
+    .button-go{
+        margin-left: 200px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 50px;
+
+    }
+
+    .next{
+        width: 200px;
+        padding: 25px 0 25px 0;
+        border-radius: 10px;
+        border: solid 3px #404040;
+        align-items: center;
+        text-align: center;
+        font-style: none;
+        font-size: 30px;
+        font-style: none;
+        color: white;
+        background: rgb(250, 161, 24);
+        font-weight: 400px;
+        font-family: 'Gill Sans', 'Gill Sans MT', 'Trebuchet MS', sans-serif;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+        transition: all 0.3s ease;
+        cursor: pointer;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    }
+    .next:hover{
+        background: rgb(250, 161, 24);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+        transform: translateY(-2px);
+    }
+    .previous{
+        width: 200px;
+        padding: 25px 0 25px 0;
+        border-radius: 10px;
+        border: solid 3px #404040;
+        align-items: center;
+        text-align: center;
+        font-style: none;
+        font-size: 30px;
+        font-style: none;
+        color: white;
+        background: rgb(250, 161, 24);
+        font-weight: 400px;
+        font-family: 'Gill Sans', 'Gill Sans MT', 'Trebuchet MS', sans-serif;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+        transition: all 0.3s ease;
+        cursor: pointer;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    }
+    .previous:hover{
+        background: rgb(250, 161, 24);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+        transform: translateY(-2px);
+    }
+
+    .leave{
+        width: 200px;
+        padding: 25px 0 25px 0;
+        border-radius: 10px;
+        border: solid 3px #404040;
+        align-items: center;
+        text-align: center;
+        font-style: none;
+        font-size: 30px;
+        font-style: none;
+        color: white;
+        background: rgb(250, 161, 24);
+        font-weight: 400px;
+        font-family: 'Gill Sans', 'Gill Sans MT', 'Trebuchet MS', sans-serif;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+        transition: all 0.3s ease;
+        cursor: pointer;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    }
+    .leave:hover{
+        background: rgb(250, 161, 24);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+        transform: translateY(-2px);
+    }
+
+/*Atributos generales*/
+
+    img{
+        width: 180px;
+        padding-top: 20px;
+    }
+
+    a{
+        text-decoration: none;
+    }
+
+/*Titulos*/
+
+    .title1{
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        font-size: 10px;
+        font-weight: bold;
+        font-family: 'Segoe UI', Arial, sans-serif;
+        color: rgb(255, 255, 255);
+        text-transform: uppercase;
+        letter-spacing: 3px;
+        position: relative;
+    }
+
+    .title2{
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        font-size: 34px;
+        font-weight: bold;
+        font-family: 'Segoe UI', Arial, sans-serif;
+        color: #0066cc;
+        text-transform: uppercase;
+        letter-spacing: 3px;
+        margin-bottom: 15px;
+        position: relative;
+    }
+
+    /*Palabras*/
+
+p{
+    font-size: 17px;
+    
+}
+
+h1{
+    color: #003d99;
+    font-weight: 400px;
+    font-family: 'Gill Sans', 'Gill Sans MT', 'Trebuchet MS', sans-serif;
+    font-size: 60px;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+    background-color: #e6f3ff;
+    padding: 20px;
+    border-radius: 10px;
+    display: inline-block;
+}
+
+h2{ 
+    color: #0066cc;
+    font-weight: 400px;
+    font-family: 'Gill Sans', 'Gill Sans MT', 'Trebuchet MS', sans-serif;
+    font-size: 50px;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+    padding: 15px 100px;
+    border-radius: 15px;
+    display: inline-block;
+}
+
+
+a{
+    text-decoration: none; /* Quita la línea */
+    color: #0066cc; /* Cambia el color (ej. negro) */
+}
+
+/*Palabras*/
+
+.boton-vehiculo {
+  font-size: 30px;
+  padding: 30px 220px;
+}
+
+/*content-especializado*/
+
+    .content-2{
+        background-color: white;
+        margin: 10px;
+        padding: 15px;
+        border-radius: 15px;
+        max-width: 550px;
+        display: flex;
+        flex-wrap: wrap;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        font-size: 30px;
+        font-weight: bold;
+        font-family: Arial, Helvetica, sans-serif;
+        color: #0066cc;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        transition: transform 0.3s, box-shadow 0.3s;
+    }
+
+.content-2:hover{
+    transform: scale(1.05);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+}
+
+.boton-vehiculo-2 { 
+  font-size: 30px;
+  background-color: rgb(232, 117, 46);
+  padding: 30px 50px;
+}
+
+.hidden {
+  display: none;
+}
+
+.vehicle-detail {
+  animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.characteristics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+}
+
+.char-item {
+  display: flex;
+  align-items: center;
+  background: white;
+  padding: 15px;
+  border-radius: 10px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  font-size: 24px;
+  font-weight: bold;
+  color: #0066cc;
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.char-item:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+}
+
+.char-item .icon {
+  margin-right: 10px;
+  font-size: 30px;
+}
+
+.roads-container {
+  display: flex;
+  gap: 30px;
+  justify-content: center;
+}
+
+.road-card {
+  position: relative;
+  background: linear-gradient(135deg, green 0%, #32cd32 100%);
+  padding: 15px;
+  border-radius: 20px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+  transition: transform 0.3s, box-shadow 0.3s;
+  overflow: hidden;
+}
+
+.road-card:hover {
+  transform: scale(1.05);
+  box-shadow: 0 12px 30px rgba(0,0,0,0.4);
+}
+
+.road-card img {
+  display: block;
+  transition: opacity 0.3s;
+}
+
+.road-card:hover img {
+  opacity: 0.8;
+}
+
+.check-overlay {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(255,255,255,0.9);
+  color: green;
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 30px;
+  font-weight: bold;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+
+.check-overlay.warning {
+  background: rgba(255,255,255,0.9);
+  color: orange;
+}
+
+.road-label {
+  text-align: center;
+  margin-top: 10px;
+  font-size: 18px;
+  font-weight: bold;
+  color: #0066cc;
+}
+
+.check-overlay.danger {
+  background: rgba(255,255,255,0.9);
+  color: red;
+}
+
